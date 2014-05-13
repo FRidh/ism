@@ -1,0 +1,251 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Reference &mdash; ism 0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="ism 0.0 documentation" href="index.html" />
+    <link rel="prev" title="Welcome to ism’s documentation!" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to ism’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">ism 0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="reference">
+<span id="id1"></span><h1>Reference<a class="headerlink" href="#reference" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul class="simple">
+</ul>
+</div>
+<span class="target" id="module-ism"></span><span class="target" id="module-ism._ism"></span><dl class="class">
+<dt id="ism._ism.Mirror">
+<em class="property">class </em><tt class="descclassname">ism._ism.</tt><tt class="descname">Mirror</tt><a class="headerlink" href="#ism._ism.Mirror" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Temporary object that stores information of a mirror source.</p>
+<p>This is the <tt class="docutils literal"><span class="pre">qslist</span></tt> object.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="ism._ism.Wall">
+<em class="property">class </em><tt class="descclassname">ism._ism.</tt><tt class="descname">Wall</tt><a class="headerlink" href="#ism._ism.Wall" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">geometry.core.Polygon</span></tt></p>
+<p>An object describing a wall.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ism._ism.is_shadowed">
+<tt class="descclassname">ism._ism.</tt><tt class="descname">is_shadowed</tt><big>(</big><big>)</big><a class="headerlink" href="#ism._ism.is_shadowed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test whether the receiver is shadowed by any of the walls.</p>
+<p>We need to test whether the source can see the receiver.
+If any of the walls doesn&#8217;t block line of sight, and if the receiver is in the field angle,
+then the receiver is not shadowed and thus the source is effective.</p>
+<p>So we need to test using a field angle.</p>
+<p>And we need to test whether no objects are in between.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ism._ism.test_effectiveness">
+<tt class="descclassname">ism._ism.</tt><tt class="descname">test_effectiveness</tt><big>(</big><big>)</big><a class="headerlink" href="#ism._ism.test_effectiveness" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test the effectiveness of a mirror at a receiver location.</p>
+</dd></dl>
+
+<span class="target" id="module-ism.ism"></span><dl class="class">
+<dt id="ism.ism.Model">
+<em class="property">class </em><tt class="descclassname">ism.ism.</tt><tt class="descname">Model</tt><big>(</big><em>walls</em>, <em>source</em>, <em>receiver</em>, <em>max_order=3</em><big>)</big><a class="headerlink" href="#ism.ism.Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Main class containing the ISM model.</p>
+<dl class="method">
+<dt id="ism.ism.Model.determine_effectiveness">
+<tt class="descname">determine_effectiveness</tt><big>(</big><big>)</big><a class="headerlink" href="#ism.ism.Model.determine_effectiveness" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test effectiveness for all receiver positions using the mirrors stored in <a class="reference internal" href="#ism.ism.Model.mirrors" title="ism.ism.Model.mirrors"><tt class="xref py py-attr docutils literal"><span class="pre">mirrors</span></tt></a>.</p>
+<p>Returns a list of tuples where every tuple contains (effective, strength, distance) for a given receiver position.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ism.ism.Model.determine_mirrors">
+<tt class="descname">determine_mirrors</tt><big>(</big><big>)</big><a class="headerlink" href="#ism.ism.Model.determine_mirrors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Obtain the mirror source positions for the first receiver position. Mirrors are stored in <a class="reference internal" href="#ism.ism.Model.mirrors" title="ism.ism.Model.mirrors"><tt class="xref py py-attr docutils literal"><span class="pre">mirrors</span></tt></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ism.ism.Model.max">
+<tt class="descname">max</tt><big>(</big><em>N=1</em>, <em>effective=True</em><big>)</big><a class="headerlink" href="#ism.ism.Model.max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the N strongest mirror sources.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ism.ism.Model.max_order">
+<tt class="descname">max_order</tt><em class="property"> = None</em><a class="headerlink" href="#ism.ism.Model.max_order" title="Permalink to this definition">¶</a></dt>
+<dd><p>Order threshold. Highest order to include.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ism.ism.Model.mirrors">
+<tt class="descname">mirrors</tt><em class="property"> = None</em><a class="headerlink" href="#ism.ism.Model.mirrors" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of all image sources including the initial source.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ism.ism.Model.receiver">
+<tt class="descname">receiver</tt><em class="property"> = None</em><a class="headerlink" href="#ism.ism.Model.receiver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receiver positions. Iterable of receiver positions.  <tt class="xref py py-class docutils literal"><span class="pre">Geometry.PointList</span></tt>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ism.ism.Model.sort">
+<tt class="descname">sort</tt><big>(</big><em>effective=True</em><big>)</big><a class="headerlink" href="#ism.ism.Model.sort" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sort the data with the strongest mirror sources first.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ism.ism.Model.source">
+<tt class="descname">source</tt><em class="property"> = None</em><a class="headerlink" href="#ism.ism.Model.source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Source position of type <tt class="xref py py-class docutils literal"><span class="pre">Geometry.Point</span></tt>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ism.ism.Model.walls">
+<tt class="descname">walls</tt><em class="property"> = None</em><a class="headerlink" href="#ism.ism.Model.walls" title="Permalink to this definition">¶</a></dt>
+<dd><p>Walls</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="ism.ism.amount_of_sources">
+<tt class="descclassname">ism.ism.</tt><tt class="descname">amount_of_sources</tt><big>(</big><em>order</em>, <em>walls</em><big>)</big><a class="headerlink" href="#ism.ism.amount_of_sources" title="Permalink to this definition">¶</a></dt>
+<dd><p>The amount of potential sources <span class="math">\(N\)</span> up to a certain order <span class="math">\(o\)</span> for a given amount of walls <span class="math">\(w\)</span>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>order</strong> &#8211; Order threshold <span class="math">\(o\)</span>.</li>
+<li><strong>walls</strong> &#8211; Amount of walls <span class="math">\(w\)</span>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">int</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The amount of potential sources <span class="math">\(N\)</span> is given by</p>
+<div class="math">
+\[N = 1 + \sum w \left( w-1 \right)^{o-1}\]</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ism.ism.ism">
+<tt class="descclassname">ism.ism.</tt><tt class="descname">ism</tt><big>(</big><em>walls</em>, <em>source_position</em>, <em>receiver_position</em>, <em>max_order=3</em><big>)</big><a class="headerlink" href="#ism.ism.ism" title="Permalink to this definition">¶</a></dt>
+<dd><p>Image source method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>walls</strong> &#8211; List of walls</li>
+<li><strong>source</strong> &#8211; Position of Source</li>
+<li><strong>receiver</strong> &#8211; Position of Receiver</li>
+<li><strong>max_order</strong> &#8211; Maximum order to determine image sources for.</li>
+<li><strong>max_distance</strong> &#8211; Maximum distance</li>
+<li><strong>max_amplitude</strong> &#8211; Maximum amplitude</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Welcome to ism&#8217;s documentation!</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/reference.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to ism’s documentation!"
+             >previous</a> |</li>
+        <li><a href="index.html">ism 0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Frederik Rietdijk.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
+    </div>
+  </body>
+</html>
