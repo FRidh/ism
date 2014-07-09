@@ -1,8 +1,18 @@
+"""
+This module contains an implementation of the Image Source Method (ISM).
+"""
+
 import abc
 from geometry import Point, PointList, Plane, Polygon
 from _ism import Wall, Mirror, is_shadowed, test_effectiveness
 import logging
+import numpy as np
 
+# To render the geometry
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Patch3DCollection
+from ._tools import Arrow3D
 
 def amount_of_sources(order, walls):
     """
@@ -24,7 +34,7 @@ def amount_of_sources(order, walls):
 
 class Model(object):
     """
-    Main class containing the ISM model.
+    The `Model` is the main class used for determining mirror sources and their effectiveness.
     """
     
     
@@ -96,9 +106,9 @@ class Model(object):
         """
         self._allocate_mirror_arrays()
         
-        r = len(self.receiver)
+        amount_of_receivers = len(self.receiver)
         
-        for p in range(r):
+        for p in range(amount_of_receivers):
         
             for mirror in self.mirrors:
                 try:
@@ -125,6 +135,13 @@ class Model(object):
         Return the N strongest mirror sources.
         """
         return self.sort()[0:N]
+    
+    def plot_walls(self, filename=None):
+        """
+        Render of the walls. See :def:`plot_walls`.
+        """
+        return plot_walls(self.walls, filename)
+    
     
 def ism(walls, source_position, receiver_position, max_order=3):
     """
@@ -247,8 +264,67 @@ def ism(walls, source_position, receiver_position, max_order=3):
 
     return [val for subl in mirrors for val in subl]
 
-  
-#@autojit                
 
-#@autojit
-        
+def plot_model(model, filename=None):
+    """
+    Render of the image source model.
+    """
+    raise NotImplementedError
+
+
+def plot_walls(walls, filename=None):
+    """
+    Render of the walls.
+    
+    :param walls: Iterable of walls.
+    :param filename: Optional filename to write figure to.
+    
+    :returns: figure if filename not specified else None
+    
+    """
+    
+    ARROW_LENGTH = 10.0
+    
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    #ax = fig.gca(projection='3d')
+    ax.set_aspect("equal")
+    polygons = Poly3DCollection( [wall.points for wall in walls] )
+    #polygons.set_color(colors.rgb2hex(sp.rand(3)))
+    #polygons.tri.set_edgecolor('k')
+    
+    ax.add_collection3d( polygons )
+    
+    #arrows = Patch3DCollection( [Arrow3D.from_points(wall.center, wall.center + (wall.plane().normal()*ARROW_LENGTH) ) for wall in walls ] )
+    #ax.add_collection3d(arrows)
+    
+    for wall in walls:
+        ax.add_artist(Arrow3D.from_points((wall.center), 
+                                          (wall.center + wall.plane().normal()*ARROW_LENGTH), 
+                                          mutation_scale=20, 
+                                          lw=1,
+                                          arrowstyle="-|>"))
+    
+    
+    
+    #ax.relim() # Does not support Collections!!! So we have to manually set the view limits...
+    #ax.autoscale()#_view()
+
+    coordinates = np.array( [wall.points for wall in walls] ).reshape((-1,3))
+    minimum = coordinates.min(axis=0)
+    maximum = coordinates.max(axis=0)
+    
+    ax.set_xlim(minimum[0] - ARROW_LENGTH, maximum[0] + ARROW_LENGTH)
+    ax.set_ylim(minimum[1] - ARROW_LENGTH, maximum[1] + ARROW_LENGTH)
+    ax.set_zlim(minimum[2] - ARROW_LENGTH, maximum[2] + ARROW_LENGTH)
+
+    ax.set_xlabel(r'$x$ in m')
+    ax.set_ylabel(r'$y$ in m')
+    ax.set_zlabel(r'$z$ in m')
+
+    if filename:
+        fig.savefig(filename)
+    else:
+        return fig
+    
