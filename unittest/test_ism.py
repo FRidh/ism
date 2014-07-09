@@ -1,13 +1,15 @@
-
-import unittest
-
+"""
+Tests for :mod:`ism`.
+"""
 import numpy as np
-
-from acoustics.ism import Model, Wall
-
+from ism import Model, Wall
 from geometry import Point
+import pytest
 
-class ModelCase(unittest.TestCase):
+class TestModel:
+    """
+    Tests for :class:`ism.Model`.
+    """
     
     def test_no_surfaces(self):
         """
@@ -19,19 +21,21 @@ class ModelCase(unittest.TestCase):
         
         walls = []
         model = Model(walls, S, R, max_order=10)
-        
-        self.assertRaises(ValueError, model.determine_mirrors)
+        with pytest.raises(ValueError):
+            model.determine_mirrors()
         
     def test_single_surface(self):
         """
         A model with one surface with the right normal causes a reflection.
         """
         
+        bands = 10 # Amount of frequency bands.
+        
         S = Point(0.7, 0.5, 0.5)
         R = [Point(0.3, 0.501, 0.501)]
         
-        impedance1 = np.ones(10)
-        
+        impedance1 = np.ones(bands) + np.ones(bands)*1j
+
         corners1 = [ Point(0.0, 0.0, 0.0), Point(1.0, 0.0, 0.0), Point(1.0, 1.0, 0.0), Point(0.0, 1.0, 0.0) ]
         wall1 = Wall(corners1, impedance1, Point(0.5, 0.5, 0.0))
     
@@ -40,13 +44,14 @@ class ModelCase(unittest.TestCase):
         mirrors = model.determine_mirrors().mirrors
         
         """One reflecting surface should give an additional so two sources."""
-        self.assertEqual(len(mirrors), 2)
+        assert(len(mirrors)==2)
+        #self.assertEqual(len(mirrors), 2)
         
         mirrors = model.determine_mirrors().determine_effectiveness().mirrors
         
         """And both are effective."""
         for mirror in mirrors:
-            self.assertTrue(mirror.effective.all())
+            assert( mirror.effective.all() == True )
         
     def test_single_surface_wrong_orientation(self):
         """
@@ -55,7 +60,9 @@ class ModelCase(unittest.TestCase):
         S = Point(0.7, 0.5, 0.5)
         R = [Point(0.3, 0.501, 0.501)]
         
-        impedance1 = np.ones(10)
+        bands = 10 # Amount of frequency bands.
+        
+        impedance1 = np.ones(bands) + np.ones(bands)*1j
         
         corners1m = [ Point(0.0, 0.0, 0.0), Point(0.0, 1.0, 0.0), Point(1.0, 1.0, 0.0), Point(1.0, 0.0, 0.0) ]
         wall1m = Wall(corners1m, impedance1, Point(0.5, 0.5, 0.0))
@@ -65,23 +72,24 @@ class ModelCase(unittest.TestCase):
         mirrors = model.determine_mirrors().mirrors
         
         """One reflecting surface should give an additional so two sources."""
-        self.assertEqual(len(mirrors), 1)
+        assert( len(mirrors) == 1)
         
         mirrors = model.determine_mirrors().determine_effectiveness().mirrors
         
         """And this mirror source is effective."""
-        self.assertTrue(mirrors[0].effective.all())
+        assert( mirrors[0].effective.all() == True )
     
     
     def test_single_surface_receiver_both_sides(self):
         """
         A model with one surface. Initially the receiver is on the correct side of the surface, but is then moved to the wrong side.
         """
-        
         S = Point(0.7, 0.5, 0.5)
         R = [Point(0.3, 0.501, 0.501), Point(0.3, 0.501, 0.501)]
         
-        impedance1 = np.ones(10)
+        bands = 10 # Amount of frequency bands.
+        
+        impedance1 = np.ones(bands) + np.ones(bands)*1j
         
         corners1 = [ Point(0.0, 0.0, 0.0), Point(1.0, 0.0, 0.0), Point(1.0, 1.0, 0.0), Point(0.0, 1.0, 0.0) ]
         wall1 = Wall(corners1, impedance1, Point(0.5, 0.5, 0.0))
@@ -91,17 +99,11 @@ class ModelCase(unittest.TestCase):
         mirrors = model.determine_mirrors().mirrors
         
         """One reflecting surface should give an additional so two sources."""
-        self.assertEqual(len(mirrors), 2)
+        assert( len(mirrors) == 2)
         
         mirrors = model.determine_mirrors().determine_effectiveness().mirrors
         
         """And both are effective."""
         for mirror in mirrors:
-            print mirror.effective
-            #self.assertTrue(mirror.effective.all())
-    
-    
-if __name__ == '__main__':
-    unittest.main()
-    
-    
+            assert(mirror.effective.all() == True )
+      
