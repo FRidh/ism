@@ -72,9 +72,9 @@ class Model(object):
         f = len(self.walls[0].impedance)
         
         for mirror in self.mirrors:
-            mirror.effective = np.empty(r)
-            mirror.distance = np.empty(r)
-            mirror.strength = np.ones((r, f))
+            mirror.effective = np.empty(r, dtype='int32')#, dtype='bool')
+            mirror.distance = np.empty(r, dtype='float64')
+            mirror.strength = np.ones((r, f), dtype='complex128')
         
     
     def determine_mirrors(self):
