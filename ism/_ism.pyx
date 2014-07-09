@@ -11,7 +11,7 @@ cdef class Wall(Polygon):
 
     #cdef public np.ndarray impedance
     
-    def __init__(self, list corners, np.ndarray[np.float64_t, ndim=1] impedance, Point center):
+    def __init__(self, list corners, np.ndarray[np.complex128_t, ndim=1] impedance, Point center):
         """
         Constructor.
         """
