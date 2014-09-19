@@ -40,4 +40,5 @@ nosetests.xml
 
 _build
 *.bak
-/ism/_ism.cpp
+*.cpp
+*.c
