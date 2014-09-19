@@ -1,7 +1,10 @@
 cimport numpy as np
 import numpy as np
-from geometry.core cimport Point, Polygon
-from geometry.core import Point, Polygon
+from geometry.point cimport Point
+from geometry.polygon cimport Polygon
+from geometry.plane cimport Plane
+from geometry.vector cimport Vector
+
 
 cdef class Wall
 cdef class Mirror
