@@ -2,9 +2,9 @@
 This module contains an implementation of the Image Source Method (ISM).
 """
 
-import abc
-from geometry import Point, PointList, Plane, Polygon
-from _ism import Wall, Mirror, is_shadowed, test_effectiveness
+from heapq import nlargest
+from geometry import Point, Plane, Polygon, PointList
+from ._ism import Wall, Mirror, is_shadowed, test_effectiveness
 import logging
 import numpy as np
 
@@ -15,8 +15,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Patch3DCollection
 from ._tools import Arrow3D
 
 def amount_of_sources(order, walls):
-    """
-    The amount of potential sources :math:`N` up to a certain order :math:`o` for a given amount of walls :math:`w`.
+    """The amount of potential sources :math:`N` up to a certain order :math:`o` for a given amount of walls :math:`w`.
     
     :param order: Order threshold :math:`o`.
     :param walls: Amount of walls :math:`w`.
@@ -33,108 +32,148 @@ def amount_of_sources(order, walls):
     
 
 class Model(object):
+    """The `Model` is the main class used for determining mirror sources and their effectiveness.
     """
-    The `Model` is the main class used for determining mirror sources and their effectiveness.
-    """
-    
-    
-    
-    
+
     def __init__(self, walls, source, receiver, max_order=3):#, max_distance=1000.0, min_amplitude=0.01):
         
         self.walls = walls
-        """
-        Walls
+        """Walls
         """
         
         self.source = source
-        """
-        Source position of type :class:`Geometry.Point`.
+        """Source position of type :class:`Geometry.Point`.
         """
         
-        self.receiver = list(receiver) if isinstance(receiver, Point) else receiver
-        """
-        Receiver positions. Iterable of receiver positions.  :class:`Geometry.PointList`.
+        self.receiver = PointList([receiver]) if isinstance(receiver, Point) else receiver
+        """Receiver positions. Iterable of receiver positions.  :class:`Geometry.PointList`.
         """
         
         self.max_order = max_order
+        """Order threshold. Highest order to include.
         """
-        Order threshold. Highest order to include.
+  
+    def mirrors(self):
+        """Mirrors.
         """
-        
-        self.mirrors = list()
+        yield from ism(self.walls, self.source, self.receiver[0], self.max_order)
+    
+    def _determine(self, mirrors):
+        """Determine mirror source effectiveness and strength.
         """
-        List of all image sources including the initial source.
-        """
-        
-        #self.effectiveness = list()
-        """
-        List of items containing effectiveness, distance and strength of the mirror.
-        """
-        
-            
-    def _allocate_mirror_arrays(self):
-        if isinstance(self.receiver, Point):
-            r = 1
-        else:
-            r = len(self.receiver)
-            
+        r = 1 if isinstance(self.receiver, Point) else len(self.receiver)
         f = len(self.walls[0].impedance)
-        
-        for mirror in self.mirrors:
-            mirror.effective = np.empty(r, dtype='int32')#, dtype='bool')
-            mirror.distance = np.empty(r, dtype='float64')
-            mirror.strength = np.ones((r, f), dtype='complex128')
-        
-    
-    def determine_mirrors(self):
-        """
-        Obtain the mirror source positions for the first receiver position. Mirrors are stored in :attr:`mirrors`.
-        """
-        if self.walls:
-            self.mirrors = ism(self.walls, self.source, self.receiver[0], self.max_order)
-        else:
-            raise ValueError("No reflecting surfaces have been specified.")
-        return self
-    
-    def determine_effectiveness(self):
-        """
-        Test effectiveness for all receiver positions using the mirrors stored in :attr:`mirrors`.
-        
-        Returns a list of tuples where every tuple contains (effective, strength, distance) for a given receiver position.
-        
-        """
-        self._allocate_mirror_arrays()
         
         amount_of_receivers = len(self.receiver)
         
-        for p in range(amount_of_receivers):
-        
-            for mirror in self.mirrors:
-                try:
-                    mother_strength = mirror.mother.strength[p]
-                except AttributeError:
-                    mother_strength = None
-                mirror.effective[p], mirror.strength[p], mirror.distance[p] = test_effectiveness(self.walls, self.source, self.receiver[p], mirror.position, mirror.wall, mother_strength)
-        
-        return self    
-    
-    
-    def sort(self, effective=True):
-        """
-        Sort the data with the strongest mirror sources first.
-        """
-        
-        self.mirrors.sort(key=lambda x:x.strength.max(), reverse=True)
-        if effective:
-            self.mirrors.sort(key=lambda x:x.effective.any(), reverse=True)
-        return self.mirrors
+        while True:
+            mirror = next(mirrors)
+            
+            mirror.effective = np.empty(r, dtype='int32')#, dtype='bool')
+            mirror.distance = np.empty(r, dtype='float64')
+            mirror.strength = np.ones((r, f), dtype='complex128')
 
-    def max(self, N=1, effective=True):
+            for t in range(amount_of_receivers):
+                if mirror.mother is not None:
+                    mother_strength = mirror.mother.strength[t]
+                else:
+                    mother_strength = None
+                mirror.effective[t], mirror.strength[t], mirror.distance[t] = test_effectiveness(self.walls, self.source, self.receiver[t], mirror.position, mirror.wall, mother_strength)
+            
+            yield mirror
+    
+    @staticmethod
+    def _strongest(mirrors, amount):
+        """Determine strongest mirror sources.
+        
+        :returns: Generator yielding sorted values.
+        
         """
-        Return the N strongest mirror sources.
+        yield from nlargest(amount, mirrors, key=lambda x:x.strength.max())
+        #results = list()
+        #for mirror in mirrors:
+            #results.sort(key=lambda x:x.strength.max(), reverse=True)
+            #for i, result in enumerate(results):
+                #if (mirror.strength > result.strength).any():
+                    #results.insert(i, mirror)
+                    #if len(results) > amount:
+                        #del results[-1]
+            #else:
+                #if len(results) < amount:
+                    #results.append(mirror)
+        #yield from results
+    
+    def determine(self, strongest=None):
+        """Determine.
         """
-        return self.sort()[0:N]
+        #self.determine_mirrors()
+        mirrors = self.mirrors()
+        mirrors = self._determine(mirrors)
+        if strongest:
+            mirrors = self._strongest(mirrors, strongest)
+        yield from mirrors
+    
+    #def _allocate_mirror_arrays(self):
+        #if isinstance(self.receiver, Point):
+            #r = 1
+        #else:
+            #r = len(self.receiver)
+            
+        #f = len(self.walls[0].impedance)
+        
+        #for mirror in self.mirrors:
+            #mirror.effective = np.empty(r, dtype='int32')#, dtype='bool')
+            #mirror.distance = np.empty(r, dtype='float64')
+            #mirror.strength = np.ones((r, f), dtype='complex128')
+
+    #def determine_mirrors(self):
+        #"""
+        #Obtain the mirror source positions for the first receiver position. Mirrors are stored in :attr:`mirrors`.
+        #"""
+        #if self.walls:
+            #self.mirrors = ism(self.walls, self.source, self.receiver[0], self.max_order)
+        #else:
+            #raise ValueError("No reflecting surfaces have been specified.")
+        #return self
+    
+    #def determine_effectiveness(self):
+        #"""
+        #Test effectiveness for all receiver positions using the mirrors stored in :attr:`mirrors`.
+        
+        #Returns a list of tuples where every tuple contains (effective, strength, distance) for a given receiver position.
+        
+        #"""
+        #self._allocate_mirror_arrays()
+        
+        #amount_of_receivers = len(self.receiver)
+        
+        #for p in range(amount_of_receivers):
+        
+            #for mirror in self.mirrors:
+                #try:
+                    #mother_strength = mirror.mother.strength[p]
+                #except AttributeError:
+                    #mother_strength = None
+                #mirror.effective[p], mirror.strength[p], mirror.distance[p] = test_effectiveness(self.walls, self.source, self.receiver[p], mirror.position, mirror.wall, mother_strength)
+        
+        #return self    
+    
+    
+    #def sort(self, effective=True):
+        #"""
+        #Sort the data with the strongest mirror sources first.
+        #"""
+        
+        #self.mirrors.sort(key=lambda x:x.strength.max(), reverse=True)
+        #if effective:
+            #self.mirrors.sort(key=lambda x:x.effective.any(), reverse=True)
+        #return self.mirrors
+
+    #def max(self, N=1, effective=True):
+        #"""
+        #Return the N strongest mirror sources.
+        #"""
+        #return self.sort(effective=effective)[0:N]
     
     def plot_walls(self, filename=None):
         """
@@ -262,14 +301,128 @@ def ism(walls, source_position, receiver_position, max_order=3):
                 #logging.info(info_string + " - Mirrorsource: {} - Effective: {}".format(position, effective))
                 #mirrors[order].append(Mirror(position, mirror, wall, order, position_receiver_distance, strength, effective))
 
-    return [val for subl in mirrors for val in subl]
+    yield from (val for subl in mirrors for val in subl)
 
 
-def plot_model(model, filename=None):
+def children(mirrors, mirror):
+    """Yield children of mirror.
     """
-    Render of the image source model.
-    """
-    raise NotImplementedError
+    for m in mirrors:
+        if m.mother == mirror:
+            yield m
+
+#def plot_model(model, receiver=0, positions=True, direct=False, intersections=True, filename=None):
+    #"""
+    #Render of the image source model.
+    #"""
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111, projection='3d')
+    #receiver = model.receiver[receiver]
+    #ax.scatter(model.receiver.x, model.receiver.y, model.receiver.z, marker='p', c='g')
+    #mirrors = list(model.mirrors())
+    #for mirror in mirrors: 
+        #while True:
+            ## Position of mirror
+            #if positions:
+                #ax.scatter(mirror.position.x, mirror.position.y, mirror.position.z)    
+            
+            ## Direct (though possibly not effective) path to receiver.
+            #if direct:
+                #ax.add_artist(Arrow3D.from_points(mirror.position,
+                                                    #receiver,
+                                                    #mutation_scale=20, 
+                                                    #lw=1,
+                                                    #arrowstyle="-|>"
+                                                    #))
+            
+
+                
+            
+            #if mirror.mother is None:
+                #ax.add_artist(Arrow3D.from_points(mirror.position,
+                                                    #receiver,
+                                                    #mutation_scale=20, 
+                                                    #lw=1,
+                                                    #arrowstyle="-|>"
+                                                    #))
+                #break
+            #else:
+                #if intersections:
+                    #intersection = mirror.wall.plane().intersection(mirror.mother.position, mirror.position)
+                    #ax.scatter(intersection.x, intersection.y, intersection.z)
+                    #ax.add_artist(Arrow3D.from_points(mirror.position,
+                                                    #intersection,
+                                                    #mutation_scale=20, 
+                                                    #lw=1,
+                                                    #arrowstyle="-|>"
+                                                    #))
+                #mirror = mirror.mother
+                    
+    #return fig
+    
+
+def plot_model(model, receiver=0, draw_receiver=True, draw_positions=True, draw_walls=True):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    
+    mirrors = list(model.mirrors())
+    
+    if draw_receiver:
+        ax.scatter(model.receiver.x, model.receiver.y, model.receiver.z, marker='p', c='g')
+    
+    if draw_positions:
+        _draw_mirrors(ax, mirrors)
+    
+    if draw_walls:
+        _draw_walls(ax, model.walls)
+
+    return fig
+
+def _draw_mirrors(ax, mirrors):
+    for mirror in mirrors:
+        ax.scatter(mirror.position.x, mirror.position.y, mirror.position.z) 
+    return ax
+    
+
+def _draw_walls(ax, walls):
+    
+    ARROW_LENGTH = 10.0
+    COLOR_FACES = (0.5, 0.5, 1.0)
+    
+    polygons = Poly3DCollection( [wall.points for wall in walls], alpha=0.5 )
+    polygons.set_facecolor(COLOR_FACES)
+    #polygons.tri.set_edgecolor('k')
+    
+    ax.add_collection3d( polygons )
+    
+    #arrows = Patch3DCollection( [Arrow3D.from_points(wall.center, wall.center + (wall.plane().normal()*ARROW_LENGTH) ) for wall in walls ] )
+    #ax.add_collection3d(arrows)
+    
+    for wall in walls:
+        ax.add_artist(Arrow3D.from_points((wall.center), 
+                                          (wall.center + wall.plane().normal()*ARROW_LENGTH), 
+                                          mutation_scale=20, 
+                                          lw=1,
+                                          arrowstyle="-|>"))
+    
+    
+    
+    #ax.relim() # Does not support Collections!!! So we have to manually set the view limits...
+    #ax.autoscale()#_view()
+
+    coordinates = np.array( [wall.points for wall in walls] ).reshape((-1,3))
+    minimum = coordinates.min(axis=0)
+    maximum = coordinates.max(axis=0)
+    
+    ax.set_xlim(minimum[0] - ARROW_LENGTH, maximum[0] + ARROW_LENGTH)
+    ax.set_ylim(minimum[1] - ARROW_LENGTH, maximum[1] + ARROW_LENGTH)
+    ax.set_zlim(minimum[2] - ARROW_LENGTH, maximum[2] + ARROW_LENGTH)
+
+    ax.set_xlabel(r'$x$ in m')
+    ax.set_ylabel(r'$y$ in m')
+    ax.set_zlabel(r'$z$ in m')
+    
+    return ax
 
 
 def plot_walls(walls, filename=None):
@@ -284,14 +437,15 @@ def plot_walls(walls, filename=None):
     """
     
     ARROW_LENGTH = 10.0
+    COLOR_FACES = (0.5, 0.5, 1.0)
     
     
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     #ax = fig.gca(projection='3d')
     ax.set_aspect("equal")
-    polygons = Poly3DCollection( [wall.points for wall in walls] )
-    #polygons.set_color(colors.rgb2hex(sp.rand(3)))
+    polygons = Poly3DCollection( [wall.points for wall in walls], alpha=0.5 )
+    polygons.set_facecolor(COLOR_FACES)
     #polygons.tri.set_edgecolor('k')
     
     ax.add_collection3d( polygons )

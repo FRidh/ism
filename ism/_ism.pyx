@@ -1,7 +1,5 @@
-cimport numpy as np
-import numpy as np
-from geometry.core cimport Point, Polygon, Plane
 
+import numpy as np
 
 cdef class Wall(Polygon):
     """
@@ -37,6 +35,7 @@ cdef class Wall(Polygon):
             return True
         else:
             return False
+
 
 cdef class Mirror(object):
     """
@@ -93,8 +92,8 @@ cdef class Mirror(object):
         """
         Source strength(factor).
         """
-        
-
+    
+    
 cpdef int is_shadowed(Point source, Point receiver, list walls):
     """
     Test whether the receiver is shadowed by any of the walls.
