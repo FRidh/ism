@@ -3,7 +3,7 @@ This module contains an implementation of the Image Source Method (ISM).
 """
 
 from heapq import nlargest
-from geometry import Point, Plane, Polygon, PointList
+from geometry import Point, Plane, Polygon
 from ._ism import Wall, Mirror, is_shadowed, test_effectiveness
 import logging
 import numpy as np
@@ -42,11 +42,15 @@ class Model(object):
         """
         
         self.source = source
-        """Source position of type :class:`Geometry.Point`.
+        """Source position.
+        
+        Required is an instance of :class:`geometry.Point`
         """
         
-        self.receiver = PointList([receiver]) if isinstance(receiver, Point) else receiver
-        """Receiver positions. Iterable of receiver positions.  :class:`Geometry.PointList`.
+        self.receiver = receiver
+        """Receiver positions. Iterable of receiver positions.
+        
+        Required is a list of instances of :class:`geometry.Point`
         """
         
         self.max_order = max_order
@@ -55,13 +59,18 @@ class Model(object):
   
     def mirrors(self):
         """Mirrors.
+        
+        Determine the mirrors of source. Whether the mirrors are effective can be obtained using :meth:`determine`.
+        
+        In order to determine the mirrors a receiver position is required. The first receiver location is chosen.
         """
         yield from ism(self.walls, self.source, self.receiver[0], self.max_order)
     
     def _determine(self, mirrors):
         """Determine mirror source effectiveness and strength.
         """
-        r = 1 if isinstance(self.receiver, Point) else len(self.receiver)
+        #r = 1 if isinstance(self.receiver, Point) else len(self.receiver)
+        r = len(self.receiver)
         f = len(self.walls[0].impedance)
         
         amount_of_receivers = len(self.receiver)
