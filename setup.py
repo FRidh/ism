@@ -17,7 +17,8 @@ setup(
           'geometry',
           'numpy',
           'matplotlib'
+          'cython',
           ],
       include_dirs = [np.get_include()], 
-      ext_modules = cythonize('ism/*.pyx')
+      ext_modules = cythonize('ism/*.pyx'),
       )
