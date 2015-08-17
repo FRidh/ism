@@ -36,6 +36,12 @@ cdef class Wall(Polygon):
         else:
             return False
 
+    def __repr__(self):
+        return "Wall({})".format(str(self))
+        
+    def __str__(self):
+        return str(self.points)
+
 
 cdef class Mirror(object):
     """
@@ -93,6 +99,12 @@ cdef class Mirror(object):
         Source strength(factor).
         """
     
+    def __repr__(self):
+        return "Mirror({})".format(str(self))
+    
+    def __str__(self):
+        return "({},{})".format(self.order, self.position)
+    
     
 cpdef int is_shadowed(Point source, Point receiver, list walls):
     """
@@ -107,17 +119,21 @@ cpdef int is_shadowed(Point source, Point receiver, list walls):
     And we need to test whether no objects are in between.
     """
     
-    
     for wall in walls:
         #logging.debug("Wall {}".format(wall.plane()))
-        if (source.on_interior_side_of(wall.plane()) == +1) :#and not (receiver.on_interior_side_of(wall.plane()) == +1):
+        #print(source.on_interior_side_of(wall.plane()))
+        #print("angle"+str(receiver.in_field_angle(source, wall, Plane.from_normal_and_point(wall.plane().normal(), receiver))))
+        if source.on_interior_side_of(wall.plane()) == +1:# and receiver.on_interior_side_of(wall.plane()) == -1):#and not (receiver.on_interior_side_of(wall.plane()) == +1):
             if receiver.in_field_angle(source, wall, Plane.from_normal_and_point(wall.plane().normal(), receiver)):
-                intersection = wall.plane().intersection(source, receiver)
-                if ((intersection-source).norm() < (receiver-source).norm())  \
-                and ((intersection-receiver).norm() < (receiver-source).norm()) :    # Wall is actually in between source and receiver.
+                #intersection = wall.plane().intersection(source, receiver)
+                #if ((intersection-source).norm() < (receiver-source).norm())  \
+                #and ((intersection-receiver).norm() < (receiver-source).norm()) :    # Wall is actually in between source and receiver.
                     return 1 
+                    #if source.on_interior_side_of(wall.plane()) != receiver.on_interior_side_of(wall.plane()):
+                        #return 1
     else:
         return 0
+                    
 
 cpdef test_effectiveness(list walls, Point source_position, Point receiver_position, Point mirror_position, Wall mirror_wall, np.ndarray mother_strength):
     """
@@ -129,22 +145,56 @@ cpdef test_effectiveness(list walls, Point source_position, Point receiver_posit
     
     distance = mirror_position.distance_to(receiver_position)
     
-    effective = not is_shadowed(mirror_position, receiver_position, walls)
+    if not mirror_wall: # Zeroth order source
+        effective = 1
+        strength = np.ones(f)
+        return effective, strength, distance
     
-    """Strength is 1 for the zeroth order source."""
-    if not mirror_wall:
-        return effective, np.ones(f), distance
-
-    cos_angle = mirror_wall.plane().normal().cosines_with(source_position.cosines_with(receiver_position))   # Cosine of the angle between the line of sight and the wall normal.
+    else:
+        if receiver_position.on_interior_side_of(mirror_wall.plane()) == +1 and receiver_position.in_field_angle(mirror_position, mirror_wall, Plane.from_normal_and_point(mirror_wall.plane().normal(), receiver_position)):
+            effective = 1
+        else:
+            effective = 0
+            
+            
+    #if mirror_position.on_interior_side_of(mirror_wall.plane())== -1:
+        #effective = 0
     
-    try:
-        refl = (mirror_wall.impedance*cos_angle - 1.0) / (mirror_wall.impedance*cos_angle + 1.0)    # Reflection coefficient
-    except ZeroDivisionError:   # If angle of incidence is 90 degrees, then cos_angle is 0.0. With hard reflection this results in a division by zero.
-        refl = 1.0
+    #elif not receiver_position.in_field_angle(mirror_position, mirror_wall, Plane.from_normal_and_point(mirror_wall.plane().normal(), receiver_position)):
+        #effective = 0
     
-    strength = mother_strength * refl   # Amplitude strength due to current and past reflections
+    #else:
+        #effective = 1
     
-    return effective, strength, distance  
+    ##effective = not is_shadowed(mirror_position, receiver_position, walls)
+    ## Zeroth order source has no mirror_wall and has strength 1.
+    ## For other sources the source and receiver have to lie on opposite sides of a plane.
+    
+    ## Strength is 1 for the zeroth order source.
+    #if not mirror_wall:
+        #strength = np.ones(f)
+    #else:    
+        
+        #if effective:
+            #if receiver_position.on_interior_side_of(mirror_wall.plane()) == -1:
+                #effective = 0
+        
+        #if effective:
+            #if (mirror_position.on_interior_side_of(mirror_wall.plane()) == receiver_position.on_interior_side_of(mirror_wall.plane())):
+                #effective = 0
+        
+        # Determine strength of source
+        cos_angle = mirror_wall.plane().normal().cosines_with(source_position.cosines_with(receiver_position))   # Cosine of the angle between the line of sight and the wall normal.
+        
+        # Reflection coefficient - Plane wave
+        try:
+            refl = (mirror_wall.impedance*cos_angle - 1.0) / (mirror_wall.impedance*cos_angle + 1.0)    # Reflection coefficient
+        except ZeroDivisionError:   # If angle of incidence is 90 degrees, then cos_angle is 0.0. With hard reflection this results in a division by zero.
+            refl = 1.0
+        
+        strength = mother_strength * refl   # Amplitude strength due to current and past reflections
+        
+        return effective, strength, distance  
 
         
         

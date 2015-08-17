@@ -6,6 +6,7 @@ from heapq import nlargest
 from geometry import Point, Plane, Polygon
 from ._ism import Wall, Mirror, is_shadowed, test_effectiveness
 import logging
+from cytoolz import unique, count
 import numpy as np
 
 # To render the geometry
@@ -13,6 +14,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Patch3DCollection
 from ._tools import Arrow3D
+from matplotlib import animation
+
 
 def amount_of_sources(order, walls):
     """The amount of potential sources :math:`N` up to a certain order :math:`o` for a given amount of walls :math:`w`.
@@ -28,11 +31,15 @@ def amount_of_sources(order, walls):
     
     
     """
-    return 1 + sum([walls*(walls-1)**(o-1) for o in range(1, order+1)])
+    return 1 + sum((walls*(walls-1)**(o-1) for o in range(1, order+1)))
+    
+    
     
 
 class Model(object):
     """The `Model` is the main class used for determining mirror sources and their effectiveness.
+    
+    This implementation requires a fixed source position. The receiver position can vary.
     """
 
     def __init__(self, walls, source, receiver, max_order=3):#, max_distance=1000.0, min_amplitude=0.01):
@@ -42,53 +49,100 @@ class Model(object):
         """
         
         self.source = source
-        """Source position.
+        """Source position. Requires a list of points.
         
-        Required is an instance of :class:`geometry.Point`
+        The source cannot move.
+        
+        ##Required is an instance of :class:`geometry.Point`
         """
         
         self.receiver = receiver
-        """Receiver positions. Iterable of receiver positions.
+        """Receiver position. Requires a list of points.
         
-        Required is a list of instances of :class:`geometry.Point`
+        The receiver can move.
+
+        ##Required is a list of instances of :class:`geometry.Point`
         """
         
         self.max_order = max_order
         """Order threshold. Highest order to include.
         """
   
+    @property
+    def source(self):
+        return self._source
+    
+    @source.setter
+    def source(self, x):
+        if isinstance(x, list):
+            self._source = x
+        elif(isinstance(x, np.ndarray)):
+            self._source = [Point(*row) for row in x]
+        else:
+            raise ValueError("List of Point instances are required.")
+    
+    @property
+    def receiver(self):
+        return self._receiver
+    
+    @receiver.setter
+    def receiver(self, x):
+        if isinstance(x, list):
+            self._receiver = x
+        elif(isinstance(x, np.ndarray)):
+            self._receiver = [Point(*row) for row in x]
+        else:
+            raise ValueError("List of Point instances are required.")
+        
+    @property
+    def is_source_moving(self):
+        return count(unique(self.source, key=tuple)) != 1
+        
+    @property
+    def is_receiver_moving(self):
+        return count(unique(self.receiver, key=tuple)) != 1
+        
+  
     def mirrors(self):
         """Mirrors.
         
-        Determine the mirrors of source. Whether the mirrors are effective can be obtained using :meth:`determine`.
+        Determine the mirrors of non-moving source. Whether the mirrors are effective can be obtained using :meth:`determine`.
         
         In order to determine the mirrors a receiver position is required. The first receiver location is chosen.
         """
-        yield from ism(self.walls, self.source, self.receiver[0], self.max_order)
+        if not self.walls:
+            raise ValueError("ISM cannot run without any walls.")
+        
+        yield from ism(self.walls, self.source[0], self.receiver[0], self.max_order)
     
     def _determine(self, mirrors):
         """Determine mirror source effectiveness and strength.
         """
         #r = 1 if isinstance(self.receiver, Point) else len(self.receiver)
-        r = len(self.receiver)
-        f = len(self.walls[0].impedance)
+        n_positions = len(self.receiver)
+        n_frequencies = len(self.walls[0].impedance)
         
-        amount_of_receivers = len(self.receiver)
-        
+        #amount_of_receiver_positions = r
+
         while True:
             mirror = next(mirrors)
-            
-            mirror.effective = np.empty(r, dtype='int32')#, dtype='bool')
-            mirror.distance = np.empty(r, dtype='float64')
-            mirror.strength = np.ones((r, f), dtype='complex128')
+            mirror.effective = np.empty(n_positions, dtype='int32')#, dtype='bool')
+            mirror.distance = np.empty(n_positions, dtype='float64')
+            mirror.strength = np.ones((n_positions, n_frequencies), dtype='complex128')
 
-            for t in range(amount_of_receivers):
+            for t in range(n_positions):
                 if mirror.mother is not None:
                     mother_strength = mirror.mother.strength[t]
                 else:
-                    mother_strength = None
-                mirror.effective[t], mirror.strength[t], mirror.distance[t] = test_effectiveness(self.walls, self.source, self.receiver[t], mirror.position, mirror.wall, mother_strength)
-            
+                    mother_strength = np.ones((n_frequencies), dtype='complex128')
+                    
+                mirror.effective[t], mirror.strength[t], mirror.distance[t] = test_effectiveness(self.walls, 
+                                                                                                 self.source[0], 
+                                                                                                 self.receiver[t], 
+                                                                                                 mirror.position, 
+                                                                                                 mirror.wall, 
+                                                                                                 mother_strength)
+
             yield mirror
     
     @staticmethod
@@ -115,6 +169,8 @@ class Model(object):
     def determine(self, strongest=None):
         """Determine.
         """
+        if not self.walls:
+            raise ValueError("ISM cannot run without any walls.")
         #self.determine_mirrors()
         mirrors = self.mirrors()
         mirrors = self._determine(mirrors)
@@ -122,68 +178,9 @@ class Model(object):
             mirrors = self._strongest(mirrors, strongest)
         yield from mirrors
     
-    #def _allocate_mirror_arrays(self):
-        #if isinstance(self.receiver, Point):
-            #r = 1
-        #else:
-            #r = len(self.receiver)
-            
-        #f = len(self.walls[0].impedance)
+    def plot(self, **kwargs):
+        return plot_model(self, **kwargs)
         
-        #for mirror in self.mirrors:
-            #mirror.effective = np.empty(r, dtype='int32')#, dtype='bool')
-            #mirror.distance = np.empty(r, dtype='float64')
-            #mirror.strength = np.ones((r, f), dtype='complex128')
-
-    #def determine_mirrors(self):
-        #"""
-        #Obtain the mirror source positions for the first receiver position. Mirrors are stored in :attr:`mirrors`.
-        #"""
-        #if self.walls:
-            #self.mirrors = ism(self.walls, self.source, self.receiver[0], self.max_order)
-        #else:
-            #raise ValueError("No reflecting surfaces have been specified.")
-        #return self
-    
-    #def determine_effectiveness(self):
-        #"""
-        #Test effectiveness for all receiver positions using the mirrors stored in :attr:`mirrors`.
-        
-        #Returns a list of tuples where every tuple contains (effective, strength, distance) for a given receiver position.
-        
-        #"""
-        #self._allocate_mirror_arrays()
-        
-        #amount_of_receivers = len(self.receiver)
-        
-        #for p in range(amount_of_receivers):
-        
-            #for mirror in self.mirrors:
-                #try:
-                    #mother_strength = mirror.mother.strength[p]
-                #except AttributeError:
-                    #mother_strength = None
-                #mirror.effective[p], mirror.strength[p], mirror.distance[p] = test_effectiveness(self.walls, self.source, self.receiver[p], mirror.position, mirror.wall, mother_strength)
-        
-        #return self    
-    
-    
-    #def sort(self, effective=True):
-        #"""
-        #Sort the data with the strongest mirror sources first.
-        #"""
-        
-        #self.mirrors.sort(key=lambda x:x.strength.max(), reverse=True)
-        #if effective:
-            #self.mirrors.sort(key=lambda x:x.effective.any(), reverse=True)
-        #return self.mirrors
-
-    #def max(self, N=1, effective=True):
-        #"""
-        #Return the N strongest mirror sources.
-        #"""
-        #return self.sort(effective=effective)[0:N]
-    
     def plot_walls(self, filename=None):
         """
         Render of the walls. See :def:`plot_walls`.
@@ -192,8 +189,7 @@ class Model(object):
     
     
 def ism(walls, source_position, receiver_position, max_order=3):
-    """
-    Image source method.
+    """Image source method.
     
     :param walls: List of walls
     :param source: Position of Source
@@ -202,16 +198,9 @@ def ism(walls, source_position, receiver_position, max_order=3):
     :param max_distance: Maximum distance
     :param max_amplitude: Maximum amplitude
     """
-    
     logging.info("Start calculating image sources.")
-    
-    #assert(source_position!=receiver_position)
-    
+
     n_walls = len(walls)
-    """
-    Amount of walls.
-    """
-    
     
     source_receiver_distance = source_position.distance_to(receiver_position)
 
@@ -249,11 +238,11 @@ def ism(walls, source_position, receiver_position, max_order=3):
                 """Step 7: Several geometrical truncations. 
                 We won't consider a mirror source when..."""
                 if wall == mirror.wall:
-                    logging.info(info_string + " - Generating wall of this mirror.")
+                    logging.info(info_string + " - Illegal- Generating wall of this mirror.")
                     continue    # ...the (mirror) source one order lower is already at this position.
                 
                 if mirror.position.on_interior_side_of(wall.plane()) == -1:
-                    logging.info(info_string + " - Mirror on wrong side of wall. Position: {}".format(mirror.position) )
+                    logging.info(info_string + " - Illegal - Mirror on wrong side of wall. Position: {}".format(mirror.position) )
                     continue    #...the (mirror) source is on the other side of the wall.
                 
                 if mirror.wall: # Should be mirrored at a wall. This is basically only an issue with zeroth order?
@@ -264,13 +253,12 @@ def ism(walls, source_position, receiver_position, max_order=3):
                     #print ('Mirror position: {}'.format(str(mirror.position)))
                     
                     
-                    if wall.center.in_field_angle(mirror.position, mirror.wall, wall.plane()) == -1:
+                    if not wall.center.in_field_angle(mirror.position, mirror.wall, wall.plane()):
                     #if is_point_in_field_angle(mirror.position, wall.center, mirror.wall, wall) == -1:
-                        logging.info(info_string + " - Center of wall cannot be seen.")
+                        logging.info(info_string + " - Illegal - Center of wall cannot be seen.")
                         continue    #...the center of the wall is not visible from the (mirror) source.
                     #else:
-                
-                
+                    
                 """Step 8: Evaluate new mirror source and its parameters."""
                 position = mirror.position.mirror_with(wall.plane())   # Position of the new source
                 
@@ -370,16 +358,25 @@ def children(mirrors, mirror):
     #return fig
     
 
-def plot_model(model, receiver=0, draw_receiver=True, draw_positions=True, draw_walls=True):
+
+
+def plot_model(model, draw_source=True, draw_receiver=True, draw_mirrors=True, draw_walls=True):
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection='3d', aspect='equal')
     
     mirrors = list(model.mirrors())
     
     if draw_receiver:
-        ax.scatter(model.receiver.x, model.receiver.y, model.receiver.z, marker='p', c='g')
+        receiver = np.asarray(model.receiver).T
+        ax.scatter(receiver[0], receiver[1], receiver[2], marker='o', c='g')
+        del receiver
     
-    if draw_positions:
+    if draw_source:
+        source = np.asarray(model.source).T
+        ax.scatter(source[0], source[1], source[2], marker='x', c='r')
+        del source
+    
+    if draw_mirrors:
         _draw_mirrors(ax, mirrors)
     
     if draw_walls:
@@ -389,11 +386,15 @@ def plot_model(model, receiver=0, draw_receiver=True, draw_positions=True, draw_
 
 def _draw_mirrors(ax, mirrors):
     for mirror in mirrors:
-        ax.scatter(mirror.position.x, mirror.position.y, mirror.position.z) 
+        if mirror.order!=0:
+            ax.scatter(mirror.position.x, mirror.position.y, mirror.position.z, marker='x', c='b') 
     return ax
     
 
 def _draw_walls(ax, walls):
+    
+    if not walls:
+        return ax
     
     ARROW_LENGTH = 10.0
     COLOR_FACES = (0.5, 0.5, 1.0)
@@ -450,7 +451,7 @@ def plot_walls(walls, filename=None):
     
     
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection='3d', aspect='equal')
     #ax = fig.gca(projection='3d')
     ax.set_aspect("equal")
     polygons = Poly3DCollection( [wall.points for wall in walls], alpha=0.5 )
@@ -491,3 +492,72 @@ def plot_walls(walls, filename=None):
     else:
         return fig
     
+
+###class AnimatedScatter(object):
+    ###"""An animated scatter plot using matplotlib.animations.FuncAnimation."""
+    ###def __init__(self, data, numpoints=50):
+        ###self.numpoints = numpoints
+        ###self.data = data
+        
+        #### Setup the figure and axes...
+        ###self.fig, self.ax = plt.subplots()
+        #### Then setup FuncAnimation.
+        ###self.ani = animation.FuncAnimation(self.fig, self.update, interval=5, 
+                                           ###init_func=self.setup_plot, blit=True)
+
+    ###def setup_plot(self):
+        ###"""Initial drawing of the scatter plot."""
+        ###x, y, s, c = next(self.stream)
+        ###self.scat = self.ax.scatter(x, y, c=c, s=s, animated=True)
+        ###self.ax.axis([-10, 10, -10, 10])
+
+        #### For FuncAnimation's sake, we need to return the artist we'll be using
+        #### Note that it expects a sequence of artists, thus the trailing comma.
+        ###return self.scat,
+
+    ###def update(self, i):
+        ###"""Update the scatter plot."""
+        ###data = next(self.data)
+
+        #### Set x and y data...
+        ###self.scat.set_offsets(data[:2, :])
+        #### Set sizes...
+        ###self.scat._sizes = 300 * abs(data[2])**1.5 + 100
+        #### Set colors..
+        ###self.scat.set_array(data[3])
+
+        #### We need to return the updated artist for FuncAnimation to draw..
+        #### Note that it expects a sequence of artists, thus the trailing comma.
+        ###return self.scat,
+
+    ###def show(self):
+        ###plt.show()
+
+
+###def animate_model(model):
+    
+    ###def _init():
+        ###dp.set_data([], [], [])
+    
+    ###def _animate(i):
+        ###receiver = np.asarray(model.receiver).T
+        ###dp.set_data(receiver[0], receiver[1], receiver[2], marker='o', c='g')
+        ###return dp
+    
+    ###fig = plt.figure()
+    ###ax = fig.add_subplot(111, projection='3d', aspect='equal')
+    ###dp = ax.scatter([], [], [])# lw=2)
+    
+    ###animation.FuncAnimation(fig, _animate, frames=model.determine(), init_func=_init)#, blit=True)
+
+###x = np.linspace(0, 10, 1000)
+
+###def init():
+    ###line.set_data([], [])
+    ###return line,
+
+###def animate(i):
+    ###line.set_data(x, np.cos(i * 0.02 * np.pi) * np.sin(x - i * 0.02 * np.pi))
+    ###return line,
+
+
