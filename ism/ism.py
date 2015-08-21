@@ -172,9 +172,12 @@ class Model(object):
         if not self.walls:
             raise ValueError("ISM cannot run without any walls.")
         #self.determine_mirrors()
+        logging.info("determine: Determining mirror sources.")
         mirrors = self.mirrors()
+        logging.info("determine: Determining mirror sources strength and effectiveness.")
         mirrors = self._determine(mirrors)
         if strongest:
+            logging.info("determine: Determining strongest mirror sources.")
             mirrors = self._strongest(mirrors, strongest)
         yield from mirrors
     
@@ -221,7 +224,7 @@ def ism(walls, source_position, receiver_position, max_order=3):
                            #not is_shadowed(source_position, receiver_position, walls)
                            #)])
     
-    mirrors.append([Mirror(source_position, None, None, 0)])
+    mirrors.append([Mirror(source_position, mother=None, wall=None, order=0)])
    
     """Step 4: Loop over orders."""
     for order in range(1, max_order+1):
@@ -261,6 +264,8 @@ def ism(walls, source_position, receiver_position, max_order=3):
                     
                 """Step 8: Evaluate new mirror source and its parameters."""
                 position = mirror.position.mirror_with(wall.plane())   # Position of the new source
+                
+                logging.info(info_string + " - Storing mirror.")
                 
                 mirrors[order].append(Mirror(position, mirror, wall, order))
                 
