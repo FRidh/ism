@@ -6,21 +6,9 @@ cdef class Wall(Polygon):
     An object describing a wall.
     
     """
+    def __cinit__(self, *args, **kwargs):
+        self.impedance = args[2]
 
-    #cdef public np.ndarray impedance
-    
-    def __init__(self, list corners, np.ndarray[np.complex128_t, ndim=1] impedance, Point center):
-        """
-        Constructor.
-        """
-        
-        super(Wall, self).__init__(corners, center)
-
-        self.impedance = impedance
-        """
-        Impedance of the wall.
-        """
-  
     def __richcmp__(self, other, int op):
         
         if not(op==2 or op==3):

@@ -36,8 +36,8 @@ class TestConcave:
         impedance1 = np.ones(bands) + np.ones(bands)*1j
 
         corners1 = [ Point(0.0, 0.0, 0.0), Point(1.0, 0.0, 0.0), Point(1.0, 1.0, 0.0), Point(0.0, 1.0, 0.0) ]
-        wall1 = Wall(corners1, impedance1, Point(0.5, 0.5, 0.0))
-    
+        wall1 = Wall(corners1, Point(0.5, 0.5, 0.0), impedance1)
+
         model = Model([wall1], S, R, max_order=3)#
         
         mirrors = list(model.mirrors())
@@ -64,8 +64,7 @@ class TestConcave:
         impedance1 = np.ones(bands) + np.ones(bands)*1j
         
         corners1m = [ Point(0.0, 0.0, 0.0), Point(0.0, 1.0, 0.0), Point(1.0, 1.0, 0.0), Point(1.0, 0.0, 0.0) ]
-        wall1m = Wall(corners1m, impedance1, Point(0.5, 0.5, 0.0))
-        
+        wall1m = Wall(corners1m, Point(0.5, 0.5, 0.0), impedance1)
         model = Model([wall1m], S, R, max_order=10)
         
         mirrors = list(model.mirrors())
@@ -91,8 +90,8 @@ class TestConcave:
         impedance1 = np.ones(bands) + np.ones(bands)*1j
         
         corners1 = [ Point(0.0, 0.0, 0.0), Point(1.0, 0.0, 0.0), Point(1.0, 1.0, 0.0), Point(0.0, 1.0, 0.0) ]
-        wall1 = Wall(corners1, impedance1, Point(0.5, 0.5, 0.0))
-    
+        wall1 = Wall(corners1, Point(0.5, 0.5, 0.0), impedance1)
+
         model = Model([wall1], S, R, max_order=10)
         
         mirrors = list(model.mirrors())
