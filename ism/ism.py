@@ -213,6 +213,7 @@ def ism(walls, source_position, receiver_position, max_order=3):
     """Step 3: Include the original source."""
     """Test first whether there is a direct path."""
     
+    
     logging.info("Main source effective: {}".format(not is_shadowed(source_position, receiver_position, walls)))
     
     #mirrors.append([Mirror(source_position, 

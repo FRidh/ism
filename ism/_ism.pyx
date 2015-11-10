@@ -30,6 +30,14 @@ cdef class Wall(Polygon):
     def __str__(self):
         return str(self.points)
 
+    def __getnewargs__(self):
+        return (self.points, self.center, self.impedance)
+
+    cpdef Wall mirror(self):
+        """Mirror the wall.
+        """
+        return Wall(self.points[::-1], self.center, self.impedance)
+
 
 cdef class Mirror(object):
     """

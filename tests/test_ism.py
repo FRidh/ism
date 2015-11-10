@@ -114,3 +114,16 @@ class TestConcave:
 
 class TestConvex:
     pass
+
+def test_pickle(impedance1):
+    corners1 = [ Point(0.0, 0.0, 0.0), Point(1.0, 0.0, 0.0), Point(1.0, 1.0, 0.0), Point(0.0, 1.0, 0.0) ]
+    wall = Wall(corners1, Point(0.5, 0.5, 0.0), impedance1)
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        with open('obj.pickle', mode='w+b') as f:
+            pickle.dump(wall, f)
+
+        with open('obj.pickle', mode='r+b') as f:
+            wall2 = pickle.load(f)
+
+        assert wall2 == wall
