@@ -19,22 +19,19 @@ from matplotlib import animation
 
 def amount_of_sources(order, walls):
     """The amount of potential sources :math:`N` up to a certain order :math:`o` for a given amount of walls :math:`w`.
-    
+
     :param order: Order threshold :math:`o`.
     :param walls: Amount of walls :math:`w`.
-    
+
     :rtype: int
-    
+
     The amount of potential sources :math:`N` is given by
-    
+
     .. math:: N = 1 + \\sum w \\left( w-1 \\right)^{o-1}
-    
-    
+
     """
     return 1 + sum((walls*(walls-1)**(o-1) for o in range(1, order+1)))
-    
-    
-    
+
 
 class Model(object):
     """The `Model` is the main class used for determining mirror sources and their effectiveness.
@@ -148,23 +145,13 @@ class Model(object):
     @staticmethod
     def _strongest(mirrors, amount):
         """Determine strongest mirror sources.
-        
+
+        :param mirrors: Iterator with mirrors.
+        :param amount: Amount of mirrors to keep.
         :returns: Generator yielding sorted values.
         
         """
         yield from nlargest(amount, mirrors, key=lambda x:x.strength.max())
-        #results = list()
-        #for mirror in mirrors:
-            #results.sort(key=lambda x:x.strength.max(), reverse=True)
-            #for i, result in enumerate(results):
-                #if (mirror.strength > result.strength).any():
-                    #results.insert(i, mirror)
-                    #if len(results) > amount:
-                        #del results[-1]
-            #else:
-                #if len(results) < amount:
-                    #results.append(mirror)
-        #yield from results
     
     def determine(self, strongest=None):
         """Determine.
@@ -189,8 +176,18 @@ class Model(object):
         Render of the walls. See :def:`plot_walls`.
         """
         return plot_walls(self.walls, filename)
-    
-    
+
+
+def strongest(mirrors, n):
+    """Keep the `n` strongest mirrors.
+
+    :param mirrors: Mirrors
+    :param n: Amount of mirrors to keep.
+
+    """
+    yield from nlargest(amount, mirrors, key=lambda x:x.strength.max())
+
+
 def ism(walls, source_position, receiver_position, max_order=3):
     """Image source method.
     

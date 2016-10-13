@@ -1,4 +1,3 @@
-
 import numpy as np
 
 cdef class Wall(Polygon):
@@ -8,6 +7,7 @@ cdef class Wall(Polygon):
     """
     def __cinit__(self, *args, **kwargs):
         self.impedance = args[2]
+        # WARNING Using keywords for impedance and such does not work!!
 
     def __richcmp__(self, other, int op):
         
@@ -152,7 +152,7 @@ cpdef test_effectiveness(list walls, Point source_position, Point receiver_posit
         else:
             effective = 0
             
-            
+
     #if mirror_position.on_interior_side_of(mirror_wall.plane())== -1:
         #effective = 0
     
